@@ -6,6 +6,9 @@ import random
 import time
 import requests
 from autoresponder import *
+import os
+import dotenv
+dotenv.load_dotenv()
 
 # Bot setup
 intents = discord.Intents.default()
@@ -284,15 +287,15 @@ async def status(ctx):
     else:
         production = f"Offline / Not working (Error {requests.get('https://blueprint-create.com').status_code})"
     # API
-    if requests.get("https://api.blueprint-create.com").status_code == 200:
+    if requests.get(os.getenv("PING2")).status_code == 200:
         api = "Online"
     else:
-        api = f"Offline / Not working (Error {requests.get('https://api.blueprint-create.com').status_code})"
+        api = f"Offline / Not working (Error {requests.get(os.getenv("PING2")).status_code})"
     # Meilisearch
-    if requests.get("https://meilisearch.blueprint-create.com").status_code == 200:
+    if requests.get(os.getenv("PING1")).status_code == 200:
         meilisearch = "Online"
     else:
-        meilisearch = f"Offline / Not working (Error {requests.get('https://meilisearch.blueprint-create.com').status_code})"
+        meilisearch = f"Offline / Not working (Error {requests.get(os.getenv("PING1")).status_code})"
     # Legacy
     if requests.get("https://blueprint-site.github.io/").status_code == 200:
         production_gh = "Online"
@@ -310,8 +313,4 @@ async def status(ctx):
 
 
 # Running
-bot.run("MTIzNDA3MDI3ODM4NDkxNDQ4Mw.GvCaHt.uTG-gMuRPi2rg0KVMOjizr02pjJePB6X0WLY1Q")
-
-
-
-
+bot.run(os.getenv('TOKEN'))
