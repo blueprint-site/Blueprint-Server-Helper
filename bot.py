@@ -310,7 +310,5 @@ async def status(ctx):
     embed.add_field(name="Bot", value="If i respond that means im online", inline=False)
     await ctx.send(embed=embed)
 
-
-
-# Running
+# Running the bot
 bot.run(os.getenv('TOKEN'))
