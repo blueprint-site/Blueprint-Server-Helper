@@ -7,4 +7,6 @@ If you intend to **copy and run** the bot in **your server** you need to change 
 - user ids
 - token
 
+3rd party packages (asset store) are mentioned inside a TXT in assets
+
 if u need help contact me by social media linked in my profile
