@@ -101,6 +101,7 @@ class HelpView(discord.ui.View):
                         **?btestingurlset <url>** - Sets the testing URL  
                         **?btestingurlget** - Gets the current testing URL (dm)
                         **?bnotifytesters** - I notify the testers inside <#1342156641843548182>
+                        **?bistesting up/down** - Sends a "testing is up/down" message in tester-announcements
         """, inline=False)
         embeds.append(embed2)
 
@@ -166,6 +167,23 @@ async def notifytesters(ctx):
     f.close()
     await channel.send(embed=embed)
 
+# newtest
+@bot.command()
+async def istesting(ctx, status: str):
+    channel = bot.get_channel(1341080131841556532)
+    if status.lower() == "up":
+        embed = discord.Embed(title="Testing site is **up**", description="You can test it", color=0x63EEAA)
+        embed.set_footer(text="The URL is inside the testing-link channel")
+        await channel.send(embed=embed)
+    elif status.lower() == "down":
+        embed = discord.Embed(title="Testing site is **down**", description="You can't test it", color=0xFF5151)
+        embed.set_footer(text="The URL is inside the testing-link channel")
+        await channel.send(embed=embed)
+    else:
+        response = await ctx.send(f"{ctx.author.mention} Please provide a valid status")
+        await ctx.message.delete()
+        await response.delete(delay=1)
+
 # testing urls
 @bot.command()
 async def testingurlset(ctx, new_url: str):
@@ -229,18 +247,22 @@ async def replyon(ctx):
     if not await is_moderator(ctx):
         return
     config["autoreplying"]["enabled"] = True
+    await ctx.message.delete()
     with open('replyingconfig.json', 'w') as f:
         json.dump(config, f)
-    await ctx.send(f"{ctx.author.mention} enabled autoreplies")
+    response = await ctx.send(f"{ctx.author.mention} enabled autoreplies")
+    await response.delete(delay=3)
 
 @bot.command()
 async def replyoff(ctx):
     if not await is_moderator(ctx):
         return
     config["autoreplying"]["enabled"] = False
+    await ctx.message.delete()
     with open('replyingconfig.json', 'w') as f:
         json.dump(config, f)
-    await ctx.send(f"{ctx.author.mention} disabled autoreplies")
+    response = await ctx.send(f"{ctx.author.mention} disabled autoreplies")
+    await response.delete(delay=3)
 
 
 # statusbot
@@ -290,12 +312,12 @@ async def status(ctx):
     if requests.get(os.getenv("PING2")).status_code == 200:
         api = "Online"
     else:
-        api = f"Offline / Not working (Error {requests.get(os.getenv("PING2")).status_code})"
+        api = f"Offline / Not working (Error {requests.get(os.getenv('PING2')).status_code})"
     # Meilisearch
     if requests.get(os.getenv("PING1")).status_code == 200:
         meilisearch = "Online"
     else:
-        meilisearch = f"Offline / Not working (Error {requests.get(os.getenv("PING1")).status_code})"
+        meilisearch = f"Offline / Not working (Error {requests.get(os.getenv('PING1')).status_code})"
     # Legacy
     if requests.get("https://blueprint-site.github.io/").status_code == 200:
         production_gh = "Online"
