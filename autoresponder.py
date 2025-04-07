@@ -8,7 +8,7 @@ with open('replyingconfig.json', 'r') as f:
 
 # Dictionary mapping keywords to responses
 RESPONSE_MAP = {
-    "when v2": ["Probably this month :)"],
+    "when v2": ["Probably this month :)", "very very soon!", "also try: when testing"],
     "greg": [
         "Ever considered going outside?",
         "A billion years to craft a door seems reasonable",

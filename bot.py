@@ -8,6 +8,7 @@ import requests
 from autoresponder import *
 import os
 import dotenv
+from tags import tagresponder, show_tags
 dotenv.load_dotenv()
 
 # Bot setup
@@ -49,10 +50,20 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
-    await autoresponder(message)
-    await bot.process_commands(message)
+    if message.content.startswith("!!"):
+        tag_name = message.content[2:].strip()
+        await tagresponder(message, override_keyword=tag_name)
+    else:
+        await autoresponder(message)
+        await bot.process_commands(message)
 
 # ---COMMANDS---
+#tags
+@bot.command()
+async def tags(ctx, *, keyword: str = None):
+    await ctx.reply("Use `!!<keyword>` to use tags")
+    await show_tags(ctx)
+
 # yapping
 @bot.command()
 async def yapping(ctx):
@@ -76,7 +87,7 @@ class HelpView(discord.ui.View):
         """Creates paginated help embeds"""
         embeds = []
 
-        embed1 = discord.Embed(title="Blueprint Bot - Help (1/3)", color=0x71A1F7)
+        embed1 = discord.Embed(title="Blueprint Bot - Help (1/4)", color=0x71A1F7)
         embed1.add_field(name="What's this?", value="A bot made for Blueprint duh!")
         embed1.add_field(name="General Commands", value="""
                         **?bhelp** - Shows this help message  
@@ -89,10 +100,11 @@ class HelpView(discord.ui.View):
                         **?bsocials** - Prints out our social media links  
                         **?bgithub** or **?bgit** - Sends a link to our GitHub repository  
                         **?bissue8ball** - Guess our resolution for your issue!
+                        **?btags** - Shows all tag keywords, and shows how to use them
         """, inline=False)
         embeds.append(embed1)
 
-        embed2 = discord.Embed(title="Blueprint Bot - Help (2/3)", color=0x71A1F7)
+        embed2 = discord.Embed(title="Blueprint Bot - Help (2/4)", color=0x71A1F7)
         embed2.add_field(name="Moderator Tools", value="""
                         **?breplyon** - Turns on autoreplying  
                         **?breplyoff** - Turns off autoreplying  
@@ -105,12 +117,20 @@ class HelpView(discord.ui.View):
         """, inline=False)
         embeds.append(embed2)
 
-        embed3 = discord.Embed(title="Blueprint Bot - Help (3/3)", color=0x71A1F7)
-        embed3.add_field(name="More Info", value="""
+        embed3 = discord.Embed(title="Using tags - Help (3/4)", color=0x71A1F7)
+        embed3.add_field(name="General Commands", value="""
+                        **?btags** - Shows how to use tags and what tags are available
+                        **!!<keyword>** - Replace keyword with one of the keywords listed in ?btags  
+        """, inline=False)
+        embeds.append(embed3)
+
+        embed4 = discord.Embed(title="Blueprint Bot - Help (4/4)", color=0x71A1F7)
+        embed4.add_field(name="More Info", value="""
         • Use `?b<command>` to interact with the bot.  
         • Have suggestions? Contact the dev team!  
         """, inline=False)
-        embeds.append(embed3)
+        embeds.append(embed4)
+
 
         return embeds
 
