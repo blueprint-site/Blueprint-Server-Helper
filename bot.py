@@ -353,4 +353,9 @@ async def status(ctx):
     await ctx.send(embed=embed)
 
 # Running the bot
-bot.run(os.getenv('TOKEN'))
+token = os.getenv('TOKEN')
+print(token)
+try:
+    bot.run(token)
+except Exception as e:
+    print(f"Error: {e}")
