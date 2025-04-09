@@ -88,11 +88,11 @@ async def on_message(message):
     await autoresponder(message)
 
     # XP logic
-    base_xp = 2
+    base_xp = 4
     multiplier = get_multiplier(message.guild.id)
     xp_gain = int(base_xp * multiplier)
     if message.channel.id in SPECIAL_CHANNELS:
-        base_xp += 4
+        base_xp += 10
 
     if not message.content.startswith("!!"):
         add_xp(message.author.id, message.guild.id, xp_gain)
