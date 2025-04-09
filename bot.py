@@ -1,25 +1,51 @@
 import discord
 import sqlite3
-from discord.ext import commands
+from discord.ext import commands, tasks
 from colorama import *
 import random
 import time
 import requests
-from autoresponder import *
 import os
 import dotenv
-from tags import tagresponder, show_tags
+import asyncio
+import json
+# SQL stuff
+conn = sqlite3.connect("leveling.db")
+cursor = conn.cursor()
+
+# Functions
+from functions.addStarXp import add_star_xp
+from functions.addXp import add_xp
+from functions.removeXp import remove_xp
+from functions.checkLevelUp import check_level_up
+from functions.getMultiplier import get_multiplier
+from functions.tags import tagresponder, show_tags
+
+# Views
+from commands.helpCommand import HelpView
+
+# Commands
+from functions.autoresponder import autoresponder, show_keywords, config
+
+# Loading doetenv
 dotenv.load_dotenv()
 
 # Bot setup
 intents = discord.Intents.default()
 intents.messages = True
-intents.message_content = True  # Required for message content access
-
-bot = commands.Bot(command_prefix="?b", intents=intents, help_command=None)
+intents.message_content = True 
+bot = commands.Bot(command_prefix="!!", intents=intents, help_command=None)
+bot.remove_command('help')
+intents.all()
+intents.members = True
+# Values
+SPECIAL_CHANNELS = [1242015121040080917, 1270359419862909020]  # replace with real IDs
+BLACKLISTED_CHANNELS = [1352349213614145547]
+XP_MULTIPLIER = 1
 
 # Your Discord user ID (replace with your actual ID)
 OWNER_ID = 1031798724483096628  # Replace this with your actual Discord ID
+
 
 async def is_moderator(ctx):
     # Replace with your actual moderator role ID
@@ -31,6 +57,7 @@ async def is_moderator(ctx):
     await warning_message.delete(delay=5)
     await ctx.message.delete()
     return False
+
 
 async def is_dev(ctx):
     dev_role_id = 1238217978680442980
@@ -44,18 +71,57 @@ async def is_dev(ctx):
 
 @bot.event
 async def on_ready():
+    voice_xp_loop.start()
     print(Back.GREEN+"BOT READY | -S-T-A-R-T--B-O-T-"+Style.RESET_ALL)
 
+# Autoresponder and chat xp
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
-    if message.content.startswith("!!"):
-        tag_name = message.content[2:].strip()
+    if message.content.startswith("!!!"):
+        tag_name = message.content[3:].strip()
         await tagresponder(message, override_keyword=tag_name)
     else:
-        await autoresponder(message)
         await bot.process_commands(message)
+
+    await autoresponder(message)
+
+    # XP logic
+    base_xp = 2
+    multiplier = get_multiplier(message.guild.id)
+    xp_gain = int(base_xp * multiplier)
+    if message.channel.id in SPECIAL_CHANNELS:
+        base_xp += 4
+
+    if not message.content.startswith("!!"):
+        add_xp(message.author.id, message.guild.id, xp_gain)
+        await check_level_up(message.author, message, message.channel)
+
+
+# Add xp for stars
+@bot.event
+async def on_reaction_add(reaction, user):
+    if user.bot or user == reaction.message.author:
+        return
+    
+    if str(reaction.emoji) == "⭐":  # star emoji
+        message = reaction.message
+        if message.author.bot:
+            return
+        await add_star_xp(message)
+
+# Check voice channel exp
+@tasks.loop(minutes=1)
+async def voice_xp_loop():
+    for guild in bot.guilds:
+        for vc in guild.voice_channels:
+            if vc.id not in BLACKLISTED_CHANNELS and len(vc.members) > 1:
+                for member in vc.members:
+                    if not member.bot:
+                            multiplier = get_multiplier(guild.id)
+                            xp_gain = int(1 * multiplier)
+                            add_xp(member.id, guild.id, xp_gain)
 
 # ---COMMANDS---
 #tags
@@ -74,87 +140,6 @@ async def yapping(ctx):
 async def wordlist(ctx):
     await show_keywords(ctx)
 
-
-
-# help command
-class HelpView(discord.ui.View):
-    def __init__(self):
-        super().__init__()
-        self.page = 0
-        self.embeds = self.create_help_embeds()
-
-    def create_help_embeds(self):
-        """Creates paginated help embeds"""
-        embeds = []
-
-        embed1 = discord.Embed(title="Blueprint Bot - Help (1/4)", color=0x71A1F7)
-        embed1.add_field(name="What's this?", value="A bot made for Blueprint duh!")
-        embed1.add_field(name="General Commands", value="""
-                        **?bhelp** - Shows this help message  
-                        **?bstatus** - Checks if the website is online  
-                        **?bstatusbot** - Checks if the bot is online  
-                        **?byapping** - Makes people stop yapping  
-                        **?bwordlist** - Shows what words I respond to  
-                        **?bwiki** or **?bplshelp** - Sends a link to the help center  
-                        **?bmembers** - Shows how many members are in the Discord  
-                        **?bsocials** - Prints out our social media links  
-                        **?bgithub** or **?bgit** - Sends a link to our GitHub repository  
-                        **?bissue8ball** - Guess our resolution for your issue!
-                        **?btags** - Shows all tag keywords, and shows how to use them
-        """, inline=False)
-        embeds.append(embed1)
-
-        embed2 = discord.Embed(title="Blueprint Bot - Help (2/4)", color=0x71A1F7)
-        embed2.add_field(name="Moderator Tools", value="""
-                        **?breplyon** - Turns on autoreplying  
-                        **?breplyoff** - Turns off autoreplying  
-        """, inline=False)
-        embed2.add_field(name="Developer Tools", value="""
-                        **?btestingurlset <url>** - Sets the testing URL  
-                        **?btestingurlget** - Gets the current testing URL (dm)
-                        **?bnotifytesters** - I notify the testers inside <#1342156641843548182>
-                        **?bistesting up/down** - Sends a "testing is up/down" message in tester-announcements
-        """, inline=False)
-        embeds.append(embed2)
-
-        embed3 = discord.Embed(title="Using tags - Help (3/4)", color=0x71A1F7)
-        embed3.add_field(name="General Commands", value="""
-                        **?btags** - Shows how to use tags and what tags are available
-                        **!!<keyword>** - Replace keyword with one of the keywords listed in ?btags  
-        """, inline=False)
-        embeds.append(embed3)
-
-        embed4 = discord.Embed(title="Blueprint Bot - Help (4/4)", color=0x71A1F7)
-        embed4.add_field(name="More Info", value="""
-        • Use `?b<command>` to interact with the bot.  
-        • Have suggestions? Contact the dev team!  
-        """, inline=False)
-        embeds.append(embed4)
-
-
-        return embeds
-
-    @discord.ui.button(label="◀️", style=discord.ButtonStyle.primary, disabled=True, custom_id="prev")
-    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Moves to the previous help page"""
-        self.page -= 1
-        await self.update_message(interaction)
-
-    @discord.ui.button(label="▶️", style=discord.ButtonStyle.primary, custom_id="next")
-    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Moves to the next help page"""
-        self.page += 1
-        await self.update_message(interaction)
-
-    async def update_message(self, interaction: discord.Interaction):
-        """Updates the embed & button states"""
-        for child in self.children:
-            if child.custom_id == "prev":
-                child.disabled = self.page == 0
-            if child.custom_id == "next":
-                child.disabled = self.page == len(self.embeds) - 1
-
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
 # help
 @bot.command()
 async def help(ctx):
@@ -176,7 +161,7 @@ async def notifytesters(ctx):
         response_message = await ctx.send(f"Pls use the dev server, not the public one {ctx.author.mention}")
         await response_message.delete(delay=3)
         return
-    with open('testingurl.json', 'r') as f:
+    with open('././config/testingurl.json', 'r') as f:
         config = json.load(f)
     url = config['url']
     channel = bot.get_channel(1342156641843548182)
@@ -220,12 +205,12 @@ async def testingurlset(ctx, new_url: str):
         return
 
     try:
-        with open('testingurl.json', 'r') as f:
+        with open('././config/testingurl.json', 'r') as f:
             config = json.load(f)
         
         config["url"] = new_url
 
-        with open('testingurl.json', 'w') as f:
+        with open('././config/testingurl.json', 'w') as f:
             json.dump(config, f, indent=4)
 
         await ctx.send(f"The testing URL has been updated to: {new_url}")
@@ -240,7 +225,7 @@ async def testingurlget(ctx):
         response_message = await ctx.send(f"Nuh uh, u dont have perms {ctx.author.mention}")
         await response_message.delete(delay=3)
         return
-    with open('testingurl.json', 'r') as f:
+    with open('././config/testingurl.json', 'r') as f:
         config = json.load(f)
     await ctx.author.send(f"The current testing URL is: {config['url']}")
     f.close()
@@ -249,7 +234,7 @@ async def testingurlget(ctx):
 @bot.command()
 async def autoreplying(ctx):
     embed = discord.Embed(title="Looks like u got confused!", color=0x71A1F7)
-    embed.add_field(name="Ye, definetily, ?bautoreplying is not the command u looking for", value="Try typing 'greg' and see the bot reply, and you used it by typing ?bautoreplying, you sure you will remember?")
+    embed.add_field(name="Ye, definetily, !!autoreplying is not the command u looking for", value="Try typing 'greg' and see the bot reply, and you used it by typing !!autoreplying, you sure you will remember?")
     embed.set_footer(text="if u wont remember this, then take ur dementia pills, dont forget!")
     await ctx.send(embed=embed)
 
@@ -268,7 +253,7 @@ async def replyon(ctx):
         return
     config["autoreplying"]["enabled"] = True
     await ctx.message.delete()
-    with open('replyingconfig.json', 'w') as f:
+    with open('././config/replyingconfig.json', 'w') as f:
         json.dump(config, f)
     response = await ctx.send(f"{ctx.author.mention} enabled autoreplies")
     await response.delete(delay=3)
@@ -279,7 +264,7 @@ async def replyoff(ctx):
         return
     config["autoreplying"]["enabled"] = False
     await ctx.message.delete()
-    with open('replyingconfig.json', 'w') as f:
+    with open('././config/replyingconfig.json', 'w') as f:
         json.dump(config, f)
     response = await ctx.send(f"{ctx.author.mention} disabled autoreplies")
     await response.delete(delay=3)
@@ -352,9 +337,182 @@ async def status(ctx):
     embed.add_field(name="Bot", value="If i respond that means im online", inline=False)
     await ctx.send(embed=embed)
 
+# RANKS
+# Command to check user's xp
+@bot.command()
+async def rank(ctx, *, user: discord.Member=None):
+    if user is None:
+        user = ctx.author
+
+    try:
+        cursor.execute("SELECT xp, level FROM users WHERE user_id=? AND guild_id=?", (user.id, ctx.guild.id))
+        data = cursor.fetchone()
+        if data:
+            xp, level = data
+            await ctx.send(f"{user.display_name} | Level: **{level}** | XP: **{xp}**")
+        else:
+            await ctx.send(f"No data found for {user.display_name}.")
+    except sqlite3.Error as e:
+        print(Back.RED + "Error occured when fetching user data: " + str(e) + Style.RESET_ALL)
+
+# Command to show top users
+@bot.command()
+async def top(ctx, num: int = 10):
+    """
+    Show top users in the server
+    """
+    cursor.execute("SELECT user_id, xp FROM users WHERE guild_id=? ORDER BY xp DESC LIMIT ?", (ctx.guild.id, num))
+    data = cursor.fetchall()
+
+    if data:
+        msg = f"**Top {num} users in {ctx.guild.name}**\n"
+        for i, (user_id, xp) in enumerate(data, start=1):
+            try:
+                member = await ctx.guild.fetch_member(user_id)
+                name = member.display_name
+            except discord.NotFound:
+                name = f"Unknown User ({user_id})"
+            except discord.Forbidden:
+                name = f"Private User ({user_id})"
+            except discord.HTTPException:
+                name = f"User ID {user_id}"
+
+            level = int(xp ** 0.25)
+            msg += f"{i}. {name} | **Level: {level}** | **XP: {xp}**\n"
+        await ctx.send(msg)
+    else:
+        await ctx.send("No data found for this server.")
+
+
+# Command to remove/clear xp
+@bot.command()
+async def removexp(ctx, member: discord.Member, amount: int):
+    if await is_moderator(ctx):
+        remove_xp(member.id, ctx.guild.id, amount)
+        await ctx.send(f"Removed {amount} XP from {member.display_name}.")
+
+@bot.command()
+async def addxp(ctx, member: discord.Member, amount: int):
+    if await is_moderator(ctx):
+        add_xp(member.id, ctx.guild.id, amount)
+        await ctx.send(f"Added {amount} XP to {member.display_name}.")
+
+# Command to remove/clear xp from all members
+@bot.command()
+async def removexpall(ctx, amount: int):
+    if await is_moderator(ctx):
+        embed = discord.Embed(title="Remove XP from all members", description="Are you sure?", color=discord.Color.red())
+        embed.add_field(name="Amount", value=amount, inline=False)
+        embed.add_field(name="Confirm", value="React with \U0000274c to confirm", inline=False)
+        msg = await ctx.send(embed=embed)
+        await msg.add_reaction("\U0000274c")
+        def check(reaction, user):
+            return user == ctx.author and str(reaction.emoji) == "\U0000274c"
+
+        try:
+            reaction, user = await bot.wait_for("reaction_add", timeout=30.0, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send("Timed out.")
+        else:
+            cursor.execute("SELECT user_id FROM users WHERE guild_id=?", (ctx.guild.id,))
+            data = cursor.fetchall()
+            for user_id, in data:
+                remove_xp(user_id, ctx.guild.id, amount)
+            await ctx.send(f"Removed {amount} XP from all members in the server.")
+
+@bot.command()
+async def setmult(ctx, value: float, minutes: int = 0):
+    if await is_moderator(ctx):
+        if value < 0.1:
+            await ctx.send("Multiplier must be greater than 0.")
+            return
+
+        expires_at = None
+        if minutes > 0:
+            expires_at = int(time.time()) + (minutes * 60)
+
+        cursor.execute("""
+            INSERT INTO settings (guild_id, xp_multiplier, expires_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(guild_id)
+            DO UPDATE SET xp_multiplier=excluded.xp_multiplier, expires_at=excluded.expires_at
+        """, (ctx.guild.id, value, expires_at))
+        conn.commit()
+
+        if expires_at:
+            await ctx.send(f"Set XP multiplier to **{value}x** for {minutes} minutes.")
+        else:
+            await ctx.send(f"Set XP multiplier to **{value}x** permanently.")
+
+@bot.command(name="reset_levels")
+@commands.has_permissions(administrator=True)
+async def reset_levels(ctx):
+    """
+    Deletes all level data in the current guild after emoji confirmation.
+    """
+    warning_embed = discord.Embed(
+        title="⚠️ WARNING",
+        description="This will **permanently delete all level data** for this server.\n\nDo you want to proceed?",
+        color=discord.Color.red()
+    )
+    warning_embed.set_footer(text="Step 1/2")
+
+    confirm_embed = discord.Embed(
+        title="❓ Confirm Deletion",
+        description="React with ✅ to confirm deletion or ❌ to cancel.",
+        color=discord.Color.orange()
+    )
+    confirm_embed.set_footer(text="Step 2/2")
+
+    # Step 1: Warning
+    await ctx.send(embed=warning_embed)
+
+    # Step 2: Confirmation with reactions
+    confirm_msg = await ctx.send(embed=confirm_embed)
+    await confirm_msg.add_reaction("✅")
+    await confirm_msg.add_reaction("❌")
+
+    def check(reaction, user):
+        return (
+            user == ctx.author
+            and str(reaction.emoji) in ["✅", "❌"]
+            and reaction.message.id == confirm_msg.id
+        )
+
+    try:
+        # Wait for the reaction to either be ✅ or ❌
+        reaction, user = await bot.wait_for("reaction_add", timeout=30.0, check=check)
+    except asyncio.TimeoutError:
+        timeout_embed = discord.Embed(
+            title="⏰ Timeout",
+            description="No reaction received. Deletion cancelled.",
+            color=discord.Color.dark_grey()
+        )
+        await confirm_msg.edit(embed=timeout_embed)
+        return
+
+    # React to confirm
+    if str(reaction.emoji) == "✅":
+        cursor.execute("DELETE FROM users WHERE guild_id=?", (ctx.guild.id,))
+        conn.commit()
+        success_embed = discord.Embed(
+            title="✅ Level Data Deleted",
+            description="All level data for this server has been deleted.",
+            color=discord.Color.green()
+        )
+        await confirm_msg.edit(embed=success_embed)
+    else:
+        cancel_embed = discord.Embed(
+            title="❌ Deletion Cancelled",
+            description="No data was deleted.",
+            color=discord.Color.blurple()
+        )
+        await confirm_msg.edit(embed=cancel_embed)
+
+
 # Running the bot
 token = os.getenv('TOKEN')
-print(token)
+print(token[:3])
 try:
     bot.run(token)
 except Exception as e:

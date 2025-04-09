@@ -3,8 +3,6 @@ import discord
 import json
 
 # Load configuration from config.json
-with open('replyingconfig.json', 'r') as f:
-    config = json.load(f)
 
 # Dictionary mapping keywords to responses
 RESPONSE_MAP = {
@@ -47,19 +45,22 @@ RESPONSE_MAP = {
     "im egorro": ["no u arent dummy"]
 }
 
+with open('./config/replyingconfig.json', 'r') as f:
+    config = json.load(f)
+
 async def autoresponder(message):
     # Check if autoreplying is enabled in config
     if not config.get("autoreplying", {}).get("enabled", False):
         return
+    else:
+        content = message.content.lower()
 
-    content = message.content.lower()
-
-    for keyword, responses in RESPONSE_MAP.items():
-        if keyword in content:
-            response = random.choice(responses)
-            if response:
-                await message.reply(response)
-            return 
+        for keyword, responses in RESPONSE_MAP.items():
+            if keyword in content:
+                response = random.choice(responses)
+                if response:
+                    await message.reply(response)
+                return 
 
 async def show_keywords(ctx):
     """Sends an embed with all available keywords."""
