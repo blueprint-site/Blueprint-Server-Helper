@@ -23,13 +23,9 @@ async def check_level_up(user: discord.User, message: discord.Message, channel: 
     if result is None:
         return  # User not found
     xp, level = result
-    print("xp:", xp)
-    print("level:", level)
     # Calculate the next level requirement using the exponential function
     required_xp = calculate_xp_for_level(level + 1)  # Get XP required for next level
-    print("Required XP for next level:", required_xp)
     if xp >= required_xp:
-        print("NEXT LEVEL")
         # User has enough XP to level up
         new_level = level + 1
         # Update the level in the DB
