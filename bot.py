@@ -45,7 +45,10 @@ XP_MULTIPLIER = 1
 
 # Your Discord user ID (replace with your actual ID)
 OWNER_ID = 1031798724483096628  # Replace this with your actual Discord ID
+COMMANDS_CHANNEL = 1300199215246479443
 
+async def is_command_channel(ctx):
+    return ctx.channel.id == COMMANDS_CHANNEL
 
 async def is_moderator(ctx):
     # Replace with your actual moderator role ID
@@ -77,8 +80,9 @@ async def on_ready():
 # Autoresponder and chat xp
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
+    if message.author.bot:  # Ignore bots, including the bot itself
         return
+
     if message.content.startswith("!!!"):
         tag_name = message.content[3:].strip()
         await tagresponder(message, override_keyword=tag_name)
@@ -102,9 +106,9 @@ async def on_message(message):
 # Add xp for stars
 @bot.event
 async def on_reaction_add(reaction, user):
-    if user.bot or user == reaction.message.author:
+    if user.bot or user == reaction.message.author:  # Ignore bots and self-reactions
         return
-    
+
     if str(reaction.emoji) == "⭐":  # star emoji
         message = reaction.message
         if message.author.bot:
@@ -118,10 +122,10 @@ async def voice_xp_loop():
         for vc in guild.voice_channels:
             if vc.id not in BLACKLISTED_CHANNELS and len(vc.members) > 1:
                 for member in vc.members:
-                    if not member.bot:
-                            multiplier = get_multiplier(guild.id)
-                            xp_gain = int(1 * multiplier)
-                            add_xp(member.id, guild.id, xp_gain)
+                    if not member.bot:  # Ignore bots
+                        multiplier = get_multiplier(guild.id)
+                        xp_gain = int(1 * multiplier)
+                        add_xp(member.id, guild.id, xp_gain)
 
 # ---COMMANDS---
 #tags
@@ -281,6 +285,7 @@ async def statusbot(ctx):
 @bot.command()
 async def wiki(ctx):
     await ctx.send("https://wiki.blueprint-create.com/")
+    
 @bot.command()
 async def plshelp(ctx):
     await ctx.send("https://wiki.blueprint-create.com/")
@@ -291,6 +296,7 @@ async def plshelp(ctx):
 async def github(ctx):
     embed=discord.Embed(title="Our GitHub url!", description="Here: https://github.com/blueprint-site/blueprint-site.github.io", color=0x282828)
     await ctx.send(embed=embed)
+
 @bot.command()
 async def git(ctx):
     embed=discord.Embed(title="Our GitHub url!", description="Here: https://github.com/blueprint-site/blueprint-site.github.io", color=0x282828)
@@ -341,6 +347,7 @@ async def status(ctx):
 # Command to check user's xp
 @bot.command()
 async def rank(ctx, *, user: discord.Member=None):
+    await is_command_channel(ctx)
     if user is None:
         user = ctx.author
 
@@ -361,27 +368,43 @@ async def top(ctx, num: int = 10):
     """
     Show top users in the server
     """
+    # Send a temporary embed while data is being generated
+    loading_embed = discord.Embed(
+        title="Generating Leaderboard...",
+        description="Please wait while I fetch the top users.",
+        color=discord.Color.orange()
+    )
+    loading_message = await ctx.send(embed=loading_embed)
+
     cursor.execute("SELECT user_id, xp FROM users WHERE guild_id=? ORDER BY xp DESC LIMIT ?", (ctx.guild.id, num))
     data = cursor.fetchall()
 
-    if data:
-        msg = f"**Top {num} users in {ctx.guild.name}**\n"
-        for i, (user_id, xp) in enumerate(data, start=1):
-            try:
-                member = await ctx.guild.fetch_member(user_id)
-                name = member.display_name
-            except discord.NotFound:
-                name = f"Unknown User ({user_id})"
-            except discord.Forbidden:
-                name = f"Private User ({user_id})"
-            except discord.HTTPException:
-                name = f"User ID {user_id}"
-
-            level = int(xp ** 0.25)
-            msg += f"{i}. {name} | **Level: {level}** | **XP: {xp}**\n"
-        await ctx.send(msg)
-    else:
+    if not data:
+        await loading_message.delete()
         await ctx.send("No data found for this server.")
+        return
+
+    # Create the final embed for the leaderboard
+    leaderboard_embed = discord.Embed(
+        title=f"Top {num} Users in {ctx.guild.name}",
+        color=discord.Color.blue()
+    )
+
+    for i, (user_id, xp) in enumerate(data, start=1):
+        try:
+            member = ctx.guild.get_member(user_id) or await ctx.guild.fetch_member(user_id)
+            name = member.display_name
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            name = f"Unknown User ({user_id})"
+
+        level = int(xp ** 0.25)
+        leaderboard_embed.add_field(
+            name=f"#{i}: {name}",
+            value=f"**Level:** {level} | **XP:** {xp}",
+            inline=False
+        )
+
+    await loading_message.edit(embed=leaderboard_embed)
 
 
 # Command to remove/clear xp
@@ -509,6 +532,21 @@ async def reset_levels(ctx):
         )
         await confirm_msg.edit(embed=cancel_embed)
 
+@bot.command()
+async def remove_top_xp(ctx, position: int):
+    if not await is_moderator(ctx):
+        return
+
+    cursor.execute("SELECT user_id FROM users WHERE guild_id=? ORDER BY xp DESC LIMIT 1 OFFSET ?", (ctx.guild.id, position - 1))
+    result = cursor.fetchone()
+
+    if result:
+        user_id = result[0]
+        cursor.execute("DELETE FROM users WHERE user_id=? AND guild_id=?", (user_id, ctx.guild.id))
+        conn.commit()
+        await ctx.send(f"Removed all XP and deleted data for the user at position {position} in the leaderboard.")
+    else:
+        await ctx.send(f"No user found at position {position} in the leaderboard.")
 
 # Running the bot
 token = os.getenv('TOKEN')

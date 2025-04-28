@@ -32,6 +32,7 @@ class HelpView(discord.ui.View):
         embed2.add_field(name="Moderator Tools", value="""
                         **!!replyon** - Turns on autoreplying  
                         **!!replyoff** - Turns off autoreplying  
+                        **!!remove_top_xp <position>** - Removes all XP and deletes data for the user at the specified position in the leaderboard
         """, inline=False)
         embed2.add_field(name="Developer Tools", value="""
                         **!!testingurlset <url>** - Sets the testing URL  
