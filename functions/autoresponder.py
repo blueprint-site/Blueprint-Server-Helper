@@ -6,7 +6,7 @@ import json
 
 # Dictionary mapping keywords to responses
 RESPONSE_MAP = {
-    "when v2": ["Probably this month :)", "very very soon!", "also try: when testing"],
+    "when v2": ["Probably this month :)", "very very soon!", "also try: when testing", "I PROMISE SOON! I PROMISE!!!!", "*soon since october*"],
     "greg": [
         "Ever considered going outside?",
         "A billion years to craft a door seems reasonable",
@@ -42,7 +42,7 @@ RESPONSE_MAP = {
     "how do i test": ['dm egorro for more info'],
     "how to test": ['dm egorro for more info'],
     "going to sleep": ['good night!'],
-    "im egorro": ["no u arent dummy"]
+    "im egorro": ["no u arent"]
 }
 
 with open('./config/replyingconfig.json', 'r') as f:
