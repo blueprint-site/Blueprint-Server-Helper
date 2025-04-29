@@ -48,7 +48,14 @@ OWNER_ID = 1031798724483096628  # Replace this with your actual Discord ID
 COMMANDS_CHANNEL = 1300199215246479443
 
 async def is_command_channel(ctx):
-    return ctx.channel.id == COMMANDS_CHANNEL
+    if ctx.channel.id != COMMANDS_CHANNEL:
+        warning_message = await ctx.send("You can only use that command in <#1300199215246479443> "+ctx.author.mention)
+        await warning_message.delete(delay=2)
+        await ctx.message.delete()
+        return False
+    else:
+        return True
+
 
 async def is_moderator(ctx):
     # Replace with your actual moderator role ID
@@ -277,9 +284,10 @@ async def replyoff(ctx):
 # statusbot
 @bot.command()
 async def statusbot(ctx):
-    embed = discord.Embed(title="Blueprint-Bot status", color=0x00CC73)
-    embed.add_field(name="Uhhh", value="As u can see i responded, that means im online!")
-    await ctx.send(embed=embed)
+    if await is_command_channel(ctx):
+        embed = discord.Embed(title="Blueprint-Bot status", color=0x00CC73)
+        embed.add_field(name="Uhhh", value="As u can see i responded, that means im online!")
+        await ctx.send(embed=embed)
 
 # Wikis
 @bot.command()
@@ -314,53 +322,64 @@ async def socials(ctx):
 # status
 @bot.command()
 async def status(ctx):
-    # Domain
-    if requests.get("https://blueprint-create.com").status_code == 200:
-        production = "Online"
+    if await is_command_channel(ctx):
+        # Domain
+        if requests.get("https://blueprint-create.com").status_code == 200:
+            production = "Online"
+        else:
+            production = f"Offline / Not working (Error {requests.get('https://blueprint-create.com').status_code})"
+        # API
+        if requests.get(os.getenv("PING2")).status_code == 200:
+            api = "Online"
+        else:
+            api = f"Offline / Not working (Error {requests.get(os.getenv('PING2')).status_code})"
+        # Meilisearch
+        if requests.get(os.getenv("PING1")).status_code == 200:
+            meilisearch = "Online"
+        else:
+            meilisearch = f"Offline / Not working (Error {requests.get(os.getenv('PING1')).status_code})"
+        # Legacy
+        if requests.get("https://blueprint-site.github.io/").status_code == 200:
+            production_gh = "Online"
+        else:
+            production_gh = f"Offline / Not working (Error {requests.get('https://blueprint-site.github.io/').status_code})"    
+        # Embeds
+        embed = discord.Embed(title="The Blueprint Status", color=0x362D52)
+        embed.add_field(name="Site (Production)", value=production, inline=False)
+        embed.add_field(name="API", value=api, inline=False)
+        embed.add_field(name="Meilisearch API", value=meilisearch, inline=False)
+        embed.add_field(name="Site (Legacy, Github Pages)", value=production_gh, inline=False)
+        embed.add_field(name="Bot", value="If i respond that means im online", inline=False)
+        await ctx.send(embed=embed)
+
+# v2 is coming
+@bot.command()
+async def v2iscoming(ctx):
+    if ctx.message.reference:
+        ref = ctx.message.reference
+        msg = await ctx.channel.fetch_message(ref.message_id)
+        await msg.reply("Bro, v2 is coming **SOON**! I promise! (check out snek-peks)")
     else:
-        production = f"Offline / Not working (Error {requests.get('https://blueprint-create.com').status_code})"
-    # API
-    if requests.get(os.getenv("PING2")).status_code == 200:
-        api = "Online"
-    else:
-        api = f"Offline / Not working (Error {requests.get(os.getenv('PING2')).status_code})"
-    # Meilisearch
-    if requests.get(os.getenv("PING1")).status_code == 200:
-        meilisearch = "Online"
-    else:
-        meilisearch = f"Offline / Not working (Error {requests.get(os.getenv('PING1')).status_code})"
-    # Legacy
-    if requests.get("https://blueprint-site.github.io/").status_code == 200:
-        production_gh = "Online"
-    else:
-        production_gh = f"Offline / Not working (Error {requests.get('https://blueprint-site.github.io/').status_code})"    
-    # Embeds
-    embed = discord.Embed(title="The Blueprint Status", color=0x362D52)
-    embed.add_field(name="Site (Production)", value=production, inline=False)
-    embed.add_field(name="API", value=api, inline=False)
-    embed.add_field(name="Meilisearch API", value=meilisearch, inline=False)
-    embed.add_field(name="Site (Legacy, Github Pages)", value=production_gh, inline=False)
-    embed.add_field(name="Bot", value="If i respond that means im online", inline=False)
-    await ctx.send(embed=embed)
+        await ctx.send("Bro, v2 is coming **SOON**! I promise! (check out snek-peks)")
 
 # RANKS
 # Command to check user's xp
 @bot.command()
 async def rank(ctx, *, user: discord.Member=None):
-    await is_command_channel(ctx)
-    if user is None:
-        user = ctx.author
+    if await is_command_channel(ctx):
+        if user is None:
+            user = ctx.author
 
-    try:
-        cursor.execute("SELECT xp, level FROM users WHERE user_id=? AND guild_id=?", (user.id, ctx.guild.id))
-        data = cursor.fetchone()
-        if data:
-            xp, level = data
-            await ctx.send(f"{user.display_name} | Level: **{level}** | XP: **{xp}**")
-        else:
-            await ctx.send(f"No data found for {user.display_name}.")
-    except sqlite3.Error as e:
-        print(Back.RED + "Error occured when fetching user data: " + str(e) + Style.RESET_ALL)
+        try:
+            cursor.execute("SELECT xp, level FROM users WHERE user_id=? AND guild_id=?", (user.id, ctx.guild.id))
+            data = cursor.fetchone()
+            if data:
+                xp, level = data
+                await ctx.send(f"{user.display_name} | Level: **{level}** | XP: **{xp}**")
+            else:
+                await ctx.send(f"No data found for {user.display_name}.")
+        except sqlite3.Error as e:
+            print(Back.RED + "Error occured when fetching user data: " + str(e) + Style.RESET_ALL)
 
 # Command to show top users
 @bot.command()
@@ -368,185 +387,192 @@ async def top(ctx, num: int = 10):
     """
     Show top users in the server
     """
-    # Send a temporary embed while data is being generated
-    loading_embed = discord.Embed(
-        title="Generating Leaderboard...",
-        description="Please wait while I fetch the top users.",
-        color=discord.Color.orange()
-    )
-    loading_message = await ctx.send(embed=loading_embed)
+    if await is_command_channel(ctx):
+        # Send a temporary embed while data is being generated
+        loading_embed = discord.Embed(
+            title="Generating Leaderboard...",
+            description="Please wait while I fetch the top users.",
+            color=discord.Color.orange()
+        )
+        loading_message = await ctx.send(embed=loading_embed)
 
-    cursor.execute("SELECT user_id, xp FROM users WHERE guild_id=? ORDER BY xp DESC LIMIT ?", (ctx.guild.id, num))
-    data = cursor.fetchall()
+        cursor.execute("SELECT user_id, xp FROM users WHERE guild_id=? ORDER BY xp DESC LIMIT ?", (ctx.guild.id, num))
+        data = cursor.fetchall()
 
-    if not data:
-        await loading_message.delete()
-        await ctx.send("No data found for this server.")
-        return
+        if not data:
+            await loading_message.delete()
+            await ctx.send("No data found for this server.")
+            return
 
-    # Create the final embed for the leaderboard
-    leaderboard_embed = discord.Embed(
-        title=f"Top {num} Users in {ctx.guild.name}",
-        color=discord.Color.blue()
-    )
-
-    for i, (user_id, xp) in enumerate(data, start=1):
-        try:
-            member = ctx.guild.get_member(user_id) or await ctx.guild.fetch_member(user_id)
-            name = member.display_name
-        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-            name = f"Unknown User ({user_id})"
-
-        level = int(xp ** 0.25)
-        leaderboard_embed.add_field(
-            name=f"#{i}: {name}",
-            value=f"**Level:** {level} | **XP:** {xp}",
-            inline=False
+        # Create the final embed for the leaderboard
+        leaderboard_embed = discord.Embed(
+            title=f"Top {num} Users in {ctx.guild.name}",
+            color=discord.Color.blue()
         )
 
-    await loading_message.edit(embed=leaderboard_embed)
+        for i, (user_id, xp) in enumerate(data, start=1):
+            try:
+                member = ctx.guild.get_member(user_id) or await ctx.guild.fetch_member(user_id)
+                name = member.display_name
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                name = f"Unknown User ({user_id})"
+
+            level = int(xp ** 0.25)
+            leaderboard_embed.add_field(
+                name=f"#{i}: {name}",
+                value=f"**Level:** {level} | **XP:** {xp}",
+                inline=False
+            )
+
+        await loading_message.edit(embed=leaderboard_embed)
 
 
 # Command to remove/clear xp
 @bot.command()
 async def removexp(ctx, member: discord.Member, amount: int):
-    if await is_moderator(ctx):
-        remove_xp(member.id, ctx.guild.id, amount)
-        await ctx.send(f"Removed {amount} XP from {member.display_name}.")
+    if await is_command_channel(ctx):
+        if await is_moderator(ctx):
+            remove_xp(member.id, ctx.guild.id, amount)
+            await ctx.send(f"Removed {amount} XP from {member.display_name}.")
 
 @bot.command()
 async def addxp(ctx, member: discord.Member, amount: int):
-    if await is_moderator(ctx):
-        add_xp(member.id, ctx.guild.id, amount)
-        await ctx.send(f"Added {amount} XP to {member.display_name}.")
+    if await is_command_channel(ctx):
+        if await is_moderator(ctx):
+            add_xp(member.id, ctx.guild.id, amount)
+            await ctx.send(f"Added {amount} XP to {member.display_name}.")
 
 # Command to remove/clear xp from all members
 @bot.command()
 async def removexpall(ctx, amount: int):
-    if await is_moderator(ctx):
-        embed = discord.Embed(title="Remove XP from all members", description="Are you sure?", color=discord.Color.red())
-        embed.add_field(name="Amount", value=amount, inline=False)
-        embed.add_field(name="Confirm", value="React with \U0000274c to confirm", inline=False)
-        msg = await ctx.send(embed=embed)
-        await msg.add_reaction("\U0000274c")
-        def check(reaction, user):
-            return user == ctx.author and str(reaction.emoji) == "\U0000274c"
+    if await is_command_channel(ctx):
+        if await is_moderator(ctx):
+            embed = discord.Embed(title="Remove XP from all members", description="Are you sure?", color=discord.Color.red())
+            embed.add_field(name="Amount", value=amount, inline=False)
+            embed.add_field(name="Confirm", value="React with \U0000274c to confirm", inline=False)
+            msg = await ctx.send(embed=embed)
+            await msg.add_reaction("\U0000274c")
+            def check(reaction, user):
+                return user == ctx.author and str(reaction.emoji) == "\U0000274c"
 
-        try:
-            reaction, user = await bot.wait_for("reaction_add", timeout=30.0, check=check)
-        except asyncio.TimeoutError:
-            await ctx.send("Timed out.")
-        else:
-            cursor.execute("SELECT user_id FROM users WHERE guild_id=?", (ctx.guild.id,))
-            data = cursor.fetchall()
-            for user_id, in data:
-                remove_xp(user_id, ctx.guild.id, amount)
-            await ctx.send(f"Removed {amount} XP from all members in the server.")
+            try:
+                reaction, user = await bot.wait_for("reaction_add", timeout=30.0, check=check)
+            except asyncio.TimeoutError:
+                await ctx.send("Timed out.")
+            else:
+                cursor.execute("SELECT user_id FROM users WHERE guild_id=?", (ctx.guild.id,))
+                data = cursor.fetchall()
+                for user_id, in data:
+                    remove_xp(user_id, ctx.guild.id, amount)
+                await ctx.send(f"Removed {amount} XP from all members in the server.")
 
 @bot.command()
 async def setmult(ctx, value: float, minutes: int = 0):
-    if await is_moderator(ctx):
-        if value < 0.1:
-            await ctx.send("Multiplier must be greater than 0.")
-            return
+    if await is_command_channel(ctx):
+        if await is_moderator(ctx):
+            if value < 0.1:
+                await ctx.send("Multiplier must be greater than 0.")
+                return
 
-        expires_at = None
-        if minutes > 0:
-            expires_at = int(time.time()) + (minutes * 60)
+            expires_at = None
+            if minutes > 0:
+                expires_at = int(time.time()) + (minutes * 60)
 
-        cursor.execute("""
-            INSERT INTO settings (guild_id, xp_multiplier, expires_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT(guild_id)
-            DO UPDATE SET xp_multiplier=excluded.xp_multiplier, expires_at=excluded.expires_at
-        """, (ctx.guild.id, value, expires_at))
-        conn.commit()
+            cursor.execute("""
+                INSERT INTO settings (guild_id, xp_multiplier, expires_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(guild_id)
+                DO UPDATE SET xp_multiplier=excluded.xp_multiplier, expires_at=excluded.expires_at
+            """, (ctx.guild.id, value, expires_at))
+            conn.commit()
 
-        if expires_at:
-            await ctx.send(f"Set XP multiplier to **{value}x** for {minutes} minutes.")
-        else:
-            await ctx.send(f"Set XP multiplier to **{value}x** permanently.")
+            if expires_at:
+                await ctx.send(f"Set XP multiplier to **{value}x** for {minutes} minutes.")
+            else:
+                await ctx.send(f"Set XP multiplier to **{value}x** permanently.")
 
 @bot.command(name="reset_levels")
 @commands.has_permissions(administrator=True)
 async def reset_levels(ctx):
-    """
-    Deletes all level data in the current guild after emoji confirmation.
-    """
-    warning_embed = discord.Embed(
-        title="⚠️ WARNING",
-        description="This will **permanently delete all level data** for this server.\n\nDo you want to proceed?",
-        color=discord.Color.red()
-    )
-    warning_embed.set_footer(text="Step 1/2")
-
-    confirm_embed = discord.Embed(
-        title="❓ Confirm Deletion",
-        description="React with ✅ to confirm deletion or ❌ to cancel.",
-        color=discord.Color.orange()
-    )
-    confirm_embed.set_footer(text="Step 2/2")
-
-    # Step 1: Warning
-    await ctx.send(embed=warning_embed)
-
-    # Step 2: Confirmation with reactions
-    confirm_msg = await ctx.send(embed=confirm_embed)
-    await confirm_msg.add_reaction("✅")
-    await confirm_msg.add_reaction("❌")
-
-    def check(reaction, user):
-        return (
-            user == ctx.author
-            and str(reaction.emoji) in ["✅", "❌"]
-            and reaction.message.id == confirm_msg.id
+    if await is_command_channel(ctx):
+        """
+        Deletes all level data in the current guild after emoji confirmation.
+        """
+        warning_embed = discord.Embed(
+            title="⚠️ WARNING",
+            description="This will **permanently delete all level data** for this server.\n\nDo you want to proceed?",
+            color=discord.Color.red()
         )
+        warning_embed.set_footer(text="Step 1/2")
 
-    try:
-        # Wait for the reaction to either be ✅ or ❌
-        reaction, user = await bot.wait_for("reaction_add", timeout=30.0, check=check)
-    except asyncio.TimeoutError:
-        timeout_embed = discord.Embed(
-            title="⏰ Timeout",
-            description="No reaction received. Deletion cancelled.",
-            color=discord.Color.dark_grey()
+        confirm_embed = discord.Embed(
+            title="❓ Confirm Deletion",
+            description="React with ✅ to confirm deletion or ❌ to cancel.",
+            color=discord.Color.orange()
         )
-        await confirm_msg.edit(embed=timeout_embed)
-        return
+        confirm_embed.set_footer(text="Step 2/2")
 
-    # React to confirm
-    if str(reaction.emoji) == "✅":
-        cursor.execute("DELETE FROM users WHERE guild_id=?", (ctx.guild.id,))
-        conn.commit()
-        success_embed = discord.Embed(
-            title="✅ Level Data Deleted",
-            description="All level data for this server has been deleted.",
-            color=discord.Color.green()
-        )
-        await confirm_msg.edit(embed=success_embed)
-    else:
-        cancel_embed = discord.Embed(
-            title="❌ Deletion Cancelled",
-            description="No data was deleted.",
-            color=discord.Color.blurple()
-        )
-        await confirm_msg.edit(embed=cancel_embed)
+        # Step 1: Warning
+        await ctx.send(embed=warning_embed)
+
+        # Step 2: Confirmation with reactions
+        confirm_msg = await ctx.send(embed=confirm_embed)
+        await confirm_msg.add_reaction("✅")
+        await confirm_msg.add_reaction("❌")
+
+        def check(reaction, user):
+            return (
+                user == ctx.author
+                and str(reaction.emoji) in ["✅", "❌"]
+                and reaction.message.id == confirm_msg.id
+            )
+
+        try:
+            # Wait for the reaction to either be ✅ or ❌
+            reaction, user = await bot.wait_for("reaction_add", timeout=30.0, check=check)
+        except asyncio.TimeoutError:
+            timeout_embed = discord.Embed(
+                title="⏰ Timeout",
+                description="No reaction received. Deletion cancelled.",
+                color=discord.Color.dark_grey()
+            )
+            await confirm_msg.edit(embed=timeout_embed)
+            return
+
+        # React to confirm
+        if str(reaction.emoji) == "✅":
+            cursor.execute("DELETE FROM users WHERE guild_id=?", (ctx.guild.id,))
+            conn.commit()
+            success_embed = discord.Embed(
+                title="✅ Level Data Deleted",
+                description="All level data for this server has been deleted.",
+                color=discord.Color.green()
+            )
+            await confirm_msg.edit(embed=success_embed)
+        else:
+            cancel_embed = discord.Embed(
+                title="❌ Deletion Cancelled",
+                description="No data was deleted.",
+                color=discord.Color.blurple()
+            )
+            await confirm_msg.edit(embed=cancel_embed)
 
 @bot.command()
 async def remove_top_xp(ctx, position: int):
-    if not await is_moderator(ctx):
-        return
+    if await is_command_channel(ctx):
+        if not await is_moderator(ctx):
+            return
 
-    cursor.execute("SELECT user_id FROM users WHERE guild_id=? ORDER BY xp DESC LIMIT 1 OFFSET ?", (ctx.guild.id, position - 1))
-    result = cursor.fetchone()
+        cursor.execute("SELECT user_id FROM users WHERE guild_id=? ORDER BY xp DESC LIMIT 1 OFFSET ?", (ctx.guild.id, position - 1))
+        result = cursor.fetchone()
 
-    if result:
-        user_id = result[0]
-        cursor.execute("DELETE FROM users WHERE user_id=? AND guild_id=?", (user_id, ctx.guild.id))
-        conn.commit()
-        await ctx.send(f"Removed all XP and deleted data for the user at position {position} in the leaderboard.")
-    else:
-        await ctx.send(f"No user found at position {position} in the leaderboard.")
+        if result:
+            user_id = result[0]
+            cursor.execute("DELETE FROM users WHERE user_id=? AND guild_id=?", (user_id, ctx.guild.id))
+            conn.commit()
+            await ctx.send(f"Removed all XP and deleted data for the user at position {position} in the leaderboard.")
+        else:
+            await ctx.send(f"No user found at position {position} in the leaderboard.")
 
 # Running the bot
 token = os.getenv('TOKEN')

@@ -46,6 +46,7 @@ class HelpView(discord.ui.View):
         embed3.add_field(name="General Commands", value="""
                         **!!tags** - Shows how to use tags and what tags are available
                         **!!<keyword>** - Replace keyword with one of the keywords listed in !!tags  
+                        **!!v2iscoming** - Sends a message assuring a user that it is coming soon
         """, inline=False)
         embeds.append(embed3)
 
