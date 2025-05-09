@@ -17,7 +17,7 @@ cursor = conn.cursor()
 from functions.addStarXp import add_star_xp
 from functions.addXp import add_xp
 from functions.removeXp import remove_xp
-from functions.checkLevelUp import check_level_up
+from functions.checkLevelUp import check_level_up, calculate_xp_for_level
 from functions.getMultiplier import get_multiplier
 from functions.tags import tagresponder, show_tags
 
@@ -355,12 +355,12 @@ async def status(ctx):
         if requests.get(os.getenv("PING2")).status_code == 200:
             api = "Online"
         else:
-            api = f"Offline / Not working (Error {requests.get(os.getenv('PING2')).status_code})"
+            api = f"Offline / Not working (Error {requests.get('PING2').status_code})"
         # Meilisearch
         if requests.get(os.getenv("PING1")).status_code == 200:
             meilisearch = "Online"
         else:
-            meilisearch = f"Offline / Not working (Error {requests.get(os.getenv('PING1')).status_code})"
+            meilisearch = f"Offline / Not working (Error {requests.get('PING1').status_code})"
         # Legacy
         if requests.get("https://blueprint-site.github.io/").status_code == 200:
             production_gh = "Online"
@@ -439,7 +439,11 @@ async def top(ctx, num: int = 10):
             except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                 name = f"Unknown User ({user_id})"
 
-            level = int(xp ** 0.25)
+            # Calculate level using the algorithm from checkLevelUp.py
+            level = 1
+            while xp >= calculate_xp_for_level(level + 1):
+                level += 1
+
             leaderboard_embed.add_field(
                 name=f"#{i}: {name}",
                 value=f"**Level:** {level} | **XP:** {xp}",
@@ -596,10 +600,83 @@ async def remove_top_xp(ctx, position: int):
         else:
             await ctx.send(f"No user found at position {position} in the leaderboard.")
 
+@bot.command()
+async def recalculatetop(ctx):
+    if await is_command_channel(ctx):
+        if not await is_moderator(ctx):
+            return
+
+        warning_embed = discord.Embed(
+            title="⚠️ WARNING",
+            description="This will **recalculate all user levels** based on their current XP.\n\nDo you want to proceed?",
+            color=discord.Color.red()
+        )
+        warning_embed.set_footer(text="Step 1/2")
+
+        confirm_embed = discord.Embed(
+            title="❓ Confirm Recalculation",
+            description="React with ✅ to confirm recalculation or ❌ to cancel.",
+            color=discord.Color.orange()
+        )
+        confirm_embed.set_footer(text="Step 2/2")
+
+        # Step 1: Warning
+        await ctx.send(embed=warning_embed)
+
+        # Step 2: Confirmation with reactions
+        confirm_msg = await ctx.send(embed=confirm_embed)
+        await confirm_msg.add_reaction("✅")
+        await confirm_msg.add_reaction("❌")
+
+        def check(reaction, user):
+            return (
+                user == ctx.author
+                and str(reaction.emoji) in ["✅", "❌"]
+                and reaction.message.id == confirm_msg.id
+            )
+
+        try:
+            # Wait for the reaction to either be ✅ or ❌
+            reaction, user = await bot.wait_for("reaction_add", timeout=30.0, check=check)
+        except asyncio.TimeoutError:
+            timeout_embed = discord.Embed(
+                title="⏰ Timeout",
+                description="No reaction received. Recalculation cancelled.",
+                color=discord.Color.dark_grey()
+            )
+            await confirm_msg.edit(embed=timeout_embed)
+            return
+
+        # React to confirm
+        if str(reaction.emoji) == "✅":
+            cursor.execute("SELECT user_id, xp FROM users WHERE guild_id=?", (ctx.guild.id,))
+            data = cursor.fetchall()
+
+            for user_id, xp in data:
+                level = 1
+                while xp >= calculate_xp_for_level(level + 1):
+                    level += 1
+
+                cursor.execute("UPDATE users SET level=? WHERE user_id=? AND guild_id=?", (level, user_id, ctx.guild.id))
+
+            conn.commit()
+            success_embed = discord.Embed(
+                title="✅ Levels Recalculated",
+                description="All user levels have been recalculated based on their current XP.",
+                color=discord.Color.green()
+            )
+            await confirm_msg.edit(embed=success_embed)
+        else:
+            cancel_embed = discord.Embed(
+                title="❌ Recalculation Cancelled",
+                description="No levels were recalculated.",
+                color=discord.Color.blurple()
+            )
+            await confirm_msg.edit(embed=cancel_embed)
+
 # Running the bot
-token = os.getenv('TOKEN')
-print(token[:3])
+print(os.getenv('TOKEN'))
 try:
-    bot.run(token)
+    bot.run(os.getenv('TOKEN'))
 except Exception as e:
     print(f"Error: {e}")

@@ -67,6 +67,7 @@ class HelpView(discord.ui.View):
                         **!!setmult <value> [minutes]** - Mod only. Set XP multiplier temporarily or permanently.
                         **!!reset_levels** - Mod only. Remove ALL data
                         **!!addxp <user> <amount>** - Mod only. Add xp to a user
+                        **!!recalculatetop** - Mod only. Recalculate all user levels based on their current XP. Requires confirmation.
                         """, inline=False)
         embeds.append(embed4)
 
