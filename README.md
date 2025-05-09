@@ -1,4 +1,4 @@
-A bot that adds commands with a ?b prefix to add some fun and cool stuff to our server
+A bot that adds commands with a !! prefix to add some fun and cool stuff to our server
 
 # Not intended for public use
 ### This bot is tailor made for Blueprint's discord Server
