@@ -1,6 +1,7 @@
 import random
 import discord
 import json
+import asyncio
 
 # Load configuration from config.json
 
@@ -48,19 +49,31 @@ RESPONSE_MAP = {
 with open('./config/replyingconfig.json', 'r') as f:
     config = json.load(f)
 
+# Cooldown dictionary to track user reply times
+cooldown = {}
+COOLDOWN_TIME = 2  # Cooldown time in seconds
+
 async def autoresponder(message):
     # Check if autoreplying is enabled in config
     if not config.get("autoreplying", {}).get("enabled", False):
         return
-    else:
-        content = message.content.lower()
 
-        for keyword, responses in RESPONSE_MAP.items():
-            if keyword in content:
-                response = random.choice(responses)
-                if response:
-                    await message.reply(response)
-                return 
+    user_id = message.author.id
+    current_time = asyncio.get_event_loop().time()
+
+    # Check if the user is on cooldown
+    if user_id in cooldown and current_time - cooldown[user_id] < COOLDOWN_TIME:
+        return
+
+    content = message.content.lower()
+
+    for keyword, responses in RESPONSE_MAP.items():
+        if keyword in content:
+            response = random.choice(responses)
+            if response:
+                await message.reply(response)
+                cooldown[user_id] = current_time  # Update cooldown time
+            return 
 
 async def show_keywords(ctx):
     """Sends an embed with all available keywords."""

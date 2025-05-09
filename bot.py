@@ -84,11 +84,34 @@ async def on_ready():
     voice_xp_loop.start()
     print(Back.GREEN+"BOT READY | -S-T-A-R-T--B-O-T-"+Style.RESET_ALL)
 
+# Cooldown dictionary to track user message times
+message_cooldown = {}
+MESSAGE_COOLDOWN_TIME = 5  # Cooldown time in seconds
+
 # Autoresponder and chat xp
 @bot.event
 async def on_message(message):
     if message.author.bot:  # Ignore bots, including the bot itself
         return
+
+    user_id = message.author.id
+    current_time = asyncio.get_event_loop().time()
+
+    # Check if the user is on cooldown
+    if user_id in message_cooldown:
+        message_count = message_cooldown[user_id]["count"]
+        last_message_time = message_cooldown[user_id]["time"]
+
+        if current_time - last_message_time < 3 and message_count >= 10:
+            print(f"User {user_id} is on cooldown.")
+            return
+
+        if message_count < 10:
+            message_cooldown[user_id]["count"] += 1
+        else:
+            message_cooldown[user_id]["time"] = current_time
+    else:
+        message_cooldown[user_id] = {"count": 1, "time": current_time}
 
     if message.content.startswith("!!!"):
         tag_name = message.content[3:].strip()
@@ -369,7 +392,6 @@ async def rank(ctx, *, user: discord.Member=None):
     if await is_command_channel(ctx):
         if user is None:
             user = ctx.author
-
         try:
             cursor.execute("SELECT xp, level FROM users WHERE user_id=? AND guild_id=?", (user.id, ctx.guild.id))
             data = cursor.fetchone()
@@ -379,7 +401,7 @@ async def rank(ctx, *, user: discord.Member=None):
             else:
                 await ctx.send(f"No data found for {user.display_name}.")
         except sqlite3.Error as e:
-            print(Back.RED + "Error occured when fetching user data: " + str(e) + Style.RESET_ALL)
+            print(Back.RED + "Error occurred when fetching user data: " + str(e) + Style.RESET_ALL)
 
 # Command to show top users
 @bot.command()
