@@ -161,7 +161,7 @@ async def voice_xp_loop():
 #tags
 @bot.command()
 async def tags(ctx, *, keyword: str = None):
-    await ctx.reply("Use `!!<keyword>` to use tags")
+    await ctx.reply("Use `!!!<keyword>` to use tags")
     await show_tags(ctx)
 
 # yapping
@@ -321,17 +321,6 @@ async def wiki(ctx):
 async def plshelp(ctx):
     await ctx.send("https://wiki.blueprint-create.com/")
 
-
-# github commands
-@bot.command()
-async def github(ctx):
-    embed=discord.Embed(title="Our GitHub url!", description="Here: https://github.com/blueprint-site/blueprint-site.github.io", color=0x282828)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def git(ctx):
-    embed=discord.Embed(title="Our GitHub url!", description="Here: https://github.com/blueprint-site/blueprint-site.github.io", color=0x282828)
-    await ctx.send(embed=embed)
 
 # socials
 @bot.command()
