@@ -38,23 +38,6 @@ RESPONSE_MAP = {
                 }
             }
         ]
-    },
-    "testing": {
-        "description": "Sends info about testing",
-        "responses": [
-            {
-                "type": "text",
-                "value": "No embed returned. What the hell. This is a bug"
-            },
-            {
-                "type": "embed",
-                "value": {
-                    "title": "How can i test v2?",
-                    "description": "For now testing is not available. If you want to be a tester right now, message @.egorro and ask him to be one. Beta tests are in work and should be available soon-ish",
-                    "color": discord.Color.purple().value,
-                }
-            }
-        ]
     }
 }
 
