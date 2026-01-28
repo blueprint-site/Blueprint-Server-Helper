@@ -71,8 +71,6 @@ async def autoresponder(message):
     for keyword, responses in RESPONSE_MAP.items():
         if keyword in content:
             response = random.choice(responses)
-            if user_id == 732658475519443016 and keyword == "cog":
-                response = "cog <:trollface:1273246408551698516> https://cdn.discordapp.com/attachments/1300199215246479443/1342176557720015013/m2-res_480p-1.mp4?ex=67b8aed3&is=67b75d53&hm=25eb598fd0d496853df18122c59ec823c41fd558a5dd8e243c11a15aab9cd9f6&"
             if response:
                 await message.reply(response)
                 cooldown[user_id] = current_time  # Update cooldown time
