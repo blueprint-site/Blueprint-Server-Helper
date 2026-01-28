@@ -7,7 +7,7 @@ import asyncio
 
 # Dictionary mapping keywords to responses
 RESPONSE_MAP = {
-    "when v2": ["Probably this month :)", "very very soon!", "also try: when testing", "I PROMISE SOON! I PROMISE!!!!", "*soon since october*"],
+    "when v2": ["right now! test it https://blueprint-create.com"],
     "greg": [
         "Ever considered going outside?",
         "A billion years to craft a door seems reasonable",
@@ -31,20 +31,21 @@ RESPONSE_MAP = {
     "i luv it": [
         "https://tenor.com/view/i-luv-it-psy-lee-byung-hun-play-001-squid-game-gif-17475670124114634359"
     ],
-    "gangam": [
+    "gangnam style": [
         "https://tenor.com/view/gangnam-style-roland-library-of-ruina-black-silence-gif-17296536706784985963"
     ],
-    "how to use the bot": ["try ?bhelp"], "how do i use the bot": ["try ?bhelp"],
+    "how to use the bot": ["try !!help"], "how do i use the bot": ["try !!help"],
     "cog": ["","","","","cog <:trollface:1273246408551698516> https://cdn.discordapp.com/attachments/1300199215246479443/1342176557720015013/m2-res_480p-1.mp4?ex=67b8aed3&is=67b75d53&hm=25eb598fd0d496853df18122c59ec823c41fd558a5dd8e243c11a15aab9cd9f6&"],
-    "wrench awards": ["how do u know about this, this is a secret"],
+    "wrench awards": ["i might scrap this"],
     "gimme invite to this discord pls": ["https://discord.gg/join/ZF7bwgatrT"],
-    "when testing": ["we are working on it. probably end of week, end of the next week", "fucking soon"],
+    "when testing": ["message @.egorro for testing link (has development updates)"],
     "chat dead": ["It`s not dead it is asleep"],
     "how do i test": ['dm egorro for more info'],
     "how to test": ['dm egorro for more info'],
     "going to sleep": ['good night!'],
-    "im egorro": ["no u arent"],
+    "im egorro": ["no u arent", "you MIGHT be"],
     "outlook": ["I love logging in multiple times a day to check my emails <:1cry:1367192716672499802>"],
+    "site link": ["you might want the site link: https://blueprint-create.com"]
 }
 
 with open('./config/replyingconfig.json', 'r') as f:
