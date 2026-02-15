@@ -18,8 +18,3 @@ CREATE TABLE IF NOT EXISTS settings (
 """)
 c.execute("ALTER TABLE settings ADD COLUMN expires_at INTEGER")
 conn.commit()
-
-conn.commit()
-
-conn.commit()
-conn.commit()
