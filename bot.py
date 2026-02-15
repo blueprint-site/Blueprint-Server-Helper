@@ -312,16 +312,6 @@ async def statusbot(ctx):
         embed.add_field(name="Uhhh", value="As u can see i responded, that means im online!")
         await ctx.send(embed=embed)
 
-# Wikis
-@bot.command()
-async def wiki(ctx):
-    await ctx.send("https://wiki.blueprint-create.com/")
-    
-@bot.command()
-async def plshelp(ctx):
-    await ctx.send("https://wiki.blueprint-create.com/")
-
-
 # socials
 @bot.command()
 async def socials(ctx):
