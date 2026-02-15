@@ -1,6 +1,5 @@
 import random
 import discord
-import json
 
 RESPONSE_MAP = {
     "github": {
