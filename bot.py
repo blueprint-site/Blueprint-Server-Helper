@@ -399,6 +399,9 @@ async def top(ctx, num: int = 10):
     Show top users in the server
     """
     if await is_command_channel(ctx):
+        MAX_NUM = 100
+        if num > MAX_NUM:
+            return
         # Send a temporary embed while data is being generated
         loading_embed = discord.Embed(
             title="Generating Leaderboard...",
