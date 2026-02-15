@@ -1,6 +1,5 @@
 import sqlite3
 import discord
-import math
 
 # Database connection
 conn = sqlite3.connect("leveling.db")
